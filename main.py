@@ -1,12 +1,37 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+class ContasIterador():
+    def __init__(self, contas):
+        self.contas = contas
+        self._index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            conta = self.contas[self._index]     
+            return f"""\
+                Agência:\t{conta.agencia}
+                Número:\t\t{conta.numero}
+                Titular:\t{conta.cliente.nome}
+                Saldo:\t\tR$ {conta.saldo:.2f}
+            """
+        except IndexError: #Sabemos que chegou no fim da lista
+            raise StopIteration #Obrigatório ter esse raise nos Iteradores
+        finally:
+            self._index+=1 #Atualiza o index a cada execução
+
 class Cliente():
     def __init__(self, endereco):
         self.endereco = endereco
         self.contas = []
 
     def realizar_transacao(self, conta, transacao):
+        if len(conta.historico.transacoes_do_dia()) >= 10:
+            print('@@@ Você excedeu o numero maximo de transacoes @@@')
+            return
         transacao.registrar(conta)
         
     
@@ -168,6 +193,21 @@ class Historico():
             }
         )
         
+    def gerar_relatorio(self, tipo_transacao=None):
+        for transacao in self.transacoes:
+            if tipo_transacao == None or tipo_transacao.lower() == transacao['tipo'].lower():
+                yield(transacao)
+            
+
+    def transacoes_do_dia(self):
+        data_atual = datetime.now().date()
+        transacoes_dia = []
+        for transacao in self.transacoes:
+            data_transacao = datetime.strptime(transacao['data'], "%d-%m-%Y %H:%M:%S").date()
+            if data_atual == data_transacao:
+                transacoes_dia.append(transacao)
+        return transacoes_dia
+
 def menu():
     menu = """
     ================ MENU ================
@@ -194,7 +234,14 @@ def recuperar_conta_cliente(cliente):
     # FIXME: não permite cliente escolher a conta
     return cliente.contas[0]
 
+def log_transacao(func):
+    def envelope(*args, **kwargs):
+        data_hora_atual = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        func(*args, **kwargs)
+        print(data_hora_atual)
+    return envelope
 
+@log_transacao
 def depositar(clientes):
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -213,6 +260,7 @@ def depositar(clientes):
     cliente.realizar_transacao(conta, transacao)
 
 
+@log_transacao
 def sacar(clientes):
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -231,6 +279,7 @@ def sacar(clientes):
     cliente.realizar_transacao(conta, transacao)
 
 
+@log_transacao
 def exibir_extrato(clientes):
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -244,20 +293,23 @@ def exibir_extrato(clientes):
         return
 
     print("================ EXTRATO ================")
-    transacoes = conta.historico.transacoes
-
     extrato = ""
-    if not transacoes:
+    tem_transacoes = False
+    # for transacao in conta.historico.gerar_relatorio():
+    for transacao in conta.historico.gerar_relatorio(tipo_transacao="saque"):
+        tem_transacoes = True
+        extrato += f"\n{transacao['data']}\n{transacao['tipo']}:\n\tR$ {transacao['valor']:.2f}"
+
+    if not tem_transacoes:
         extrato = "Não foram realizadas movimentações."
-    else:
-        for transacao in transacoes:
-            extrato += f"{transacao['tipo']}:\tR$ {transacao['valor']:.2f}"
+
 
     print(extrato)
     print(f"Saldo:\tR$ {conta.saldo:.2f}")
     print("==========================================")
 
 
+@log_transacao
 def criar_cliente(clientes):
     cpf = input("Informe o CPF (somente número): ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -276,7 +328,7 @@ def criar_cliente(clientes):
 
     print("=== Cliente criado com sucesso! ===")
 
-
+@log_transacao
 def criar_conta(numero_conta, clientes, contas):
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
@@ -293,10 +345,9 @@ def criar_conta(numero_conta, clientes, contas):
 
 
 def listar_contas(contas):
-    for conta in contas:
+    for conta in ContasIterador(contas):
         print("=" * 100)
         print(str(conta))
-
 
 def main():
     clientes = []
