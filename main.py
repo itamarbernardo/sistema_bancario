@@ -45,6 +45,9 @@ class PessoaFisica(Cliente):
         self.nome = nome
         self.data_nascimento = data_nascimento
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: ('{self.cpf}')>"
+
 class Transacao(ABC):
 
     @property
@@ -148,6 +151,9 @@ class ContaCorrente(Conta):
         super().__init__(numero, cliente)
         self.limite = limite
         self.limite_saques = limite_saques
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: ('{self.agencia}', '{self.numero}', '{self.cliente.nome}')>"
     
     def sacar(self, valor):
         numero_saques = len(
