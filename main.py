@@ -242,9 +242,14 @@ def recuperar_conta_cliente(cliente):
 
 def log_transacao(func):
     def envelope(*args, **kwargs):
-        data_hora_atual = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-        func(*args, **kwargs)
-        print(data_hora_atual)
+        resultado = func(*args, **kwargs)
+        data_hora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open("log.txt", "a", encoding='utf-8') as arquivo:
+            arquivo.write(
+                f"[{data_hora}] Função '{func.__name__}' executada com argumentos {args} e {kwargs}. "
+                f"Retornou {resultado}\n"
+            )
+        return resultado 
     return envelope
 
 @log_transacao
