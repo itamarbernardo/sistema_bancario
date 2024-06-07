@@ -126,9 +126,8 @@ class Conta:
         return self._historico
 
     def sacar(self, valor):
-        saldo = (
-            self.saldo
-        )  # Estamos acessando a property -> Sem possibilidade de alterar o valor sem querer
+        saldo = self.saldo  # Estamos acessando a property
+        # Ficamos sem possibilidade de alterar o valor sem querer
         excedeu_saldo = valor > saldo
 
         if excedeu_saldo:
@@ -214,7 +213,7 @@ class Historico:
     def gerar_relatorio(self, tipo_transacao=None):
         for transacao in self.transacoes:
             if (
-                tipo_transacao == None
+                tipo_transacao is None
                 or tipo_transacao.lower() == transacao["tipo"].lower()
             ):
                 yield (transacao)
